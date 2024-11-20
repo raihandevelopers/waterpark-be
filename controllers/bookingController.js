@@ -1,19 +1,44 @@
 const Booking = require("../models/Booking");
 const Razorpay = require("razorpay");
+const nodemailer = require('nodemailer');
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
+const sendEmail = async (to, subject, text) => {
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to,
+    subject,
+    text,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+  } catch (error) {
+    console.error("Error sending email:", error);
+  }
+};
+
 // Create booking and Razorpay order
 exports.createBooking = async (req, res) => {
-  const { waterpark, name, email, phone, date, adults, children, totalPrice } = req.body;
+  const { waterpark, name, email, phone, date, adults, children, totalPrice,paymentType,waterparkName } = req.body;
   console.log(req.body);
   try {
     // Save booking details with "Pending" payment status
     const booking = new Booking({
       waterpark,
+      waterparkName,
       name,
       email,
       phone,
@@ -21,11 +46,29 @@ exports.createBooking = async (req, res) => {
       adults,
       children,
       totalPrice,
-      paymentStatus: "Pending",
+      paymentStatus:"Pending",
+      paymentType
     });
 
     await booking.save();
     console.log(booking);
+
+    const emailSubject = `Booking Confirmation for ${waterpark}`;
+    const emailBody = paymentType === "cash"
+      ? `Dear ${name},\n\nYour booking at ${waterpark} has been confirmed. Payment will be collected at the venue.\nBooking ID: ${booking._id}\n\nThank you!`
+      : `Dear ${name},\n\nYour booking at ${waterpark} has been confirmed. Payment is pending. Please complete the payment online.\nBooking ID: ${booking._id}\n\nThank you!`;
+
+    await sendEmail(email, emailSubject, emailBody);
+    if (paymentType === "cash") {
+      console.log("cash");
+      // If it's cash on delivery, just return the booking details
+      return res.status(201).json({
+        success: true,
+        booking,
+        message: "Booking created successfully with cash on delivery option.",
+      });
+    }
+
     // Create Razorpay order  
     const options = {
       amount: totalPrice * 100, // Razorpay requires amount in paise

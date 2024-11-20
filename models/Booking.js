@@ -2,6 +2,8 @@ const mongoose = require('mongoose');
 
 const bookingSchema = new mongoose.Schema({
   waterpark: { type: mongoose.Schema.Types.ObjectId, ref: 'Waterpark' },
+  waterparkName: String,
+  paymentType: String,
   name: String,
   email: String,
   phone: String,
