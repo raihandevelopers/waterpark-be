@@ -3,7 +3,7 @@ const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 
 const signup = async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password ,name,mobile} = req.body;
 
   if (!email || !password) {
     return res.status(400).json({ message: 'Email and password are required' });
@@ -24,6 +24,8 @@ const signup = async (req, res) => {
     const newUser = new User({
       email,
       password: hashedPassword,
+      name,
+      mobile
     });
 
     // Save user to the database
@@ -33,9 +35,9 @@ const signup = async (req, res) => {
     delete userResponse.password;  // Remove password from the response
 
     // Create a JWT token
-    const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET, { expiresIn: '1h' },{user:newUser});
+    const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
-    res.status(201).json({ token, message: 'User created successfully' });
+    res.status(201).json({ token, message: 'User created successfully',user:userResponse });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });

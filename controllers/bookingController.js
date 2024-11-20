@@ -92,3 +92,13 @@ exports.verifyPayment = async (req, res) => {
     });
   }
 };
+
+exports.getAllBookings = async (req, res) => {
+  try {
+    const bookings = await Booking.find(); // Fetch all bookings from the database
+    res.status(200).json(bookings); // Return bookings as a JSON response
+  } catch (error) {
+    console.error("Error fetching bookings:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};

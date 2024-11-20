@@ -3,7 +3,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const connectDB = require('./config/db');
-
+const path = require('path');
 // Import Routes
 const waterparkRoutes = require('./routes/waterparkRoutes');
 const faqRoutes = require('./routes/faqRoutes');
@@ -11,6 +11,7 @@ const bookingRoutes = require('./routes/bookingRoutes');
 const authRoutes = require('./routes/authRoutes'); // Import authentication routes
 
 const app = express();
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Connect to the database
 connectDB();
