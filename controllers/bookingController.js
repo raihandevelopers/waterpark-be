@@ -145,3 +145,29 @@ exports.getAllBookings = async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
+// Assuming the email is sent in the request body
+exports.getUserBookings = async (req, res) => {
+  const { email } = req.body;  // Get the email from the request body
+
+  try {
+    // Fetch all bookings for the specific user by email
+    const bookings = await Booking.find({ email: email });  // Find bookings with the provided email
+
+    if (bookings.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No bookings found for this email.",
+      });
+    }
+
+    // Return the bookings as a JSON response
+    res.status(200).json({
+      success: true,
+      bookings,
+    });
+  } catch (error) {
+    console.error("Error fetching bookings:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
