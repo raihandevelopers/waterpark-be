@@ -12,12 +12,18 @@ exports.addWaterpark = async (req, res) => {
       included,
       excluded,
       map,
-      price,
-      discountPrice,
+      adultPrice,
+      childPrice,
+      discountPercentage,
       advanceAmount,
       weekendPriceIncrease,
       faqs,
     } = req.body;
+
+
+    const adultDiscountedPrice = adultPrice - (adultPrice * discountPercentage) / 100;
+    const childDiscountedPrice = childPrice - (childPrice * discountPercentage) / 100;
+
 
     // Handle file uploads
     const images = req.files.map((file) => `${BASE_URL}/${file.path.replace(/\\/g, '/')}`);
@@ -32,11 +38,14 @@ exports.addWaterpark = async (req, res) => {
       name,
       description,
       location,
-      included: JSON.parse(included[1]),
-      excluded: JSON.parse(excluded[1]),
+      included: includedArray,
+      excluded: excludedArray,
       map,
-      price,
-      discountPrice,
+      adultPrice,
+      childPrice,
+      discountPercentage,
+      adultDiscountedPrice,
+      childDiscountedPrice,
       advanceAmount,
       weekendPriceIncrease,
       faqs: faqsArray,
