@@ -38,8 +38,8 @@ exports.addWaterpark = async (req, res) => {
       name,
       description,
       location,
-      included: includedArray,
-      excluded: excludedArray,
+      included : JSON.parse(included[1]),
+      excluded :JSON.parse(excluded[1]),
       map,
       adultPrice,
       childPrice,
@@ -76,13 +76,67 @@ exports.getAllWaterparks = async (req, res) => {
 
 exports.updateWaterpark = async (req, res) => {
   const { id } = req.params;
-  const updatedData = req.body;
+  const {
+    name,
+    description,
+    location,
+    included,
+    excluded,
+    map,
+    adultPrice,
+    childPrice,
+    discountPercentage,
+    advanceAmount,
+    weekendPriceIncrease,
+    // faqs,
+  } = req.body;
 
   try {
-    const updatedWaterpark = await Waterpark.findByIdAndUpdate(id, updatedData, {
-      new: true,
-      runValidators: true,
+    // Calculate discounted prices if prices and discount are provided
+    const adultDiscountedPrice =
+      adultPrice && discountPercentage
+        ? adultPrice - (adultPrice * discountPercentage) / 100
+        : undefined;
+
+    const childDiscountedPrice =
+      childPrice && discountPercentage
+        ? childPrice - (childPrice * discountPercentage) / 100
+        : undefined;
+
+    // Prepare the updated data
+    const updatedData = {
+      name,
+      description,
+      location,
+      included,
+      excluded,
+      map,
+      adultPrice,
+      childPrice,
+      discountPercentage,
+      adultDiscountedPrice,
+      childDiscountedPrice,
+      advanceAmount,
+      weekendPriceIncrease,
+      // faqs: faqs ? JSON.parse(faqs) : undefined,
+    };
+
+    // Filter out undefined values to avoid overwriting fields with `undefined`
+    Object.keys(updatedData).forEach((key) => {
+      if (updatedData[key] === undefined) {
+        delete updatedData[key];
+      }
     });
+
+    // Update the waterpark
+    const updatedWaterpark = await Waterpark.findByIdAndUpdate(
+      id,
+      updatedData,
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
 
     if (!updatedWaterpark) {
       return res.status(404).json({ error: "Waterpark not found" });
@@ -94,6 +148,7 @@ exports.updateWaterpark = async (req, res) => {
     res.status(500).json({ error: "Failed to update waterpark" });
   }
 };
+
 exports.getWaterpark = async (req, res) => {
   const { id } = req.params;
 
