@@ -170,3 +170,23 @@ exports.getWaterpark = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch waterpark" });
   }
 };
+
+
+// Delete Waterpark
+exports.deleteWaterpark = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const deletedWaterpark = await Waterpark.findByIdAndDelete(id);
+
+    if (!deletedWaterpark) {
+      return res.status(404).json({ error: "Waterpark not found" });
+    }
+
+    res.status(200).json({ message: "Waterpark deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting waterpark:", error);
+    res.status(500).json({ error: "Failed to delete waterpark" });
+  }
+};
+
