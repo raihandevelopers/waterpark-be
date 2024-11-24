@@ -9,8 +9,6 @@ exports.addWaterpark = async (req, res) => {
       name,
       description,
       location,
-      included,
-      excluded,
       map,
       adultPrice,
       childPrice,
@@ -18,28 +16,39 @@ exports.addWaterpark = async (req, res) => {
       advanceAmount,
       weekendPriceIncrease,
       faqs,
+      included,
+      excluded,
     } = req.body;
 
+    console.log(req.body);
 
+    // Calculate discounted prices
     const adultDiscountedPrice = adultPrice - (adultPrice * discountPercentage) / 100;
     const childDiscountedPrice = childPrice - (childPrice * discountPercentage) / 100;
-
 
     // Handle file uploads
     const images = req.files.map((file) => `${BASE_URL}/${file.path.replace(/\\/g, '/')}`);
 
-    // Parse FAQs
-    const faqsArray = JSON.parse(faqs);
-    if (!Array.isArray(included) || !Array.isArray(excluded)) {
-      return res.status(400).json({ message: '`included` and `excluded` should be arrays' });
+    // Parse `faqs`, `included`, and `excluded` or default to null
+    const faqsArray = faqs && faqs.trim() !== "" ? JSON.parse(faqs) : null;
+    const includedArray = included && included.trim() !== "" ? JSON.parse(included) : null;
+    const excludedArray = excluded && excluded.trim() !== "" ? JSON.parse(excluded) : null;
+
+    // Validate `included` and `excluded` if present
+    if (includedArray && !Array.isArray(includedArray)) {
+      return res.status(400).json({ message: '`included` should be an array' });
+    }
+
+    if (excludedArray && !Array.isArray(excludedArray)) {
+      return res.status(400).json({ message: '`excluded` should be an array' });
     }
 
     const newWaterpark = new Waterpark({
       name,
       description,
       location,
-      included : JSON.parse(included[1]),
-      excluded :JSON.parse(excluded[1]),
+      included: includedArray,
+      excluded: excludedArray,
       map,
       adultPrice,
       childPrice,
@@ -59,8 +68,6 @@ exports.addWaterpark = async (req, res) => {
     res.status(500).json({ message: 'Failed to add waterpark', error: error.message });
   }
 };
-
-
 exports.getAllWaterparks = async (req, res) => {
   try {
     const waterparks = await Waterpark.find();

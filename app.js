@@ -21,7 +21,9 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 connectDB();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: '*',
+}))
 app.use(bodyParser.json());
 
 // Routes

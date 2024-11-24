@@ -8,6 +8,7 @@ const bookingSchema = new mongoose.Schema({
   email: String,
   phone: String,
   date: Date,
+  bookingDate : Date,
   adults: Number,
   children: Number,
   adultPrice: Number, // Adult price per person

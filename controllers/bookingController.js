@@ -47,7 +47,8 @@ exports.createBooking = async (req, res) => {
       children,
       totalPrice,
       paymentStatus:"Pending",
-      paymentType
+      paymentType,
+      bookingDate : new Date(),
     });
 
     await booking.save();
