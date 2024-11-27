@@ -30,12 +30,11 @@ const sendEmail = async (to, subject, text) => {
   }
 };
 
-// Create booking and Razorpay order
 exports.createBooking = async (req, res) => {
-  const { waterpark, name, email, phone, date, adults, children, totalPrice,paymentType,waterparkName } = req.body;
-  console.log(req.body);
+  const { waterpark, name, email, phone, date, adults, children, totalPrice, paymentType, waterparkName } = req.body;
+
   try {
-    // Save booking details with "Pending" payment status
+    // Save booking with "Pending" payment status
     const booking = new Booking({
       waterpark,
       waterparkName,
@@ -46,13 +45,12 @@ exports.createBooking = async (req, res) => {
       adults,
       children,
       totalPrice,
-      paymentStatus:"Pending",
+      paymentStatus: "Pending",
       paymentType,
-      bookingDate : new Date(),
+      bookingDate: new Date(),
     });
 
     await booking.save();
-    console.log(booking);
 
     const emailSubject = `Booking Confirmation for ${waterpark}`;
     const emailBody = paymentType === "cash"
@@ -60,9 +58,9 @@ exports.createBooking = async (req, res) => {
       : `Dear ${name},\n\nYour booking at ${waterpark} has been confirmed. Payment is pending. Please complete the payment online.\nBooking ID: ${booking._id}\n\nThank you!`;
 
     await sendEmail(email, emailSubject, emailBody);
+
     if (paymentType === "cash") {
-      console.log("cash");
-      // If it's cash on delivery, just return the booking details
+      // If it's cash on delivery, return booking details
       return res.status(201).json({
         success: true,
         booking,
@@ -70,21 +68,38 @@ exports.createBooking = async (req, res) => {
       });
     }
 
-    // Create Razorpay order  
-    const options = {
-      amount: totalPrice * 100, // Razorpay requires amount in paise
-      currency: "INR",
-      receipt: booking._id.toString(),
+    // Initiate PhonePe payment
+    const payload = {
+      merchantId: process.env.PHONEPE_MERCHANT_ID,
+      transactionId: booking._id.toString(),
+      amount: totalPrice * 100, // Amount in paise
+      merchantOrderId: booking._id.toString(),
+      redirectUrl: process.env.PHONEPE_CALLBACK_URL,
     };
 
-    const order = await razorpay.orders.create(options);
+    // Generate the checksum
+    const checksum = crypto
+      .createHmac("sha256", process.env.PHONEPE_MERCHANT_KEY)
+      .update(JSON.stringify(payload))
+      .digest("base64");
 
-    res.status(201).json({
-      success: true,
-      booking,
-      orderId: order.id,
-      razorpayOrder: order,
+    // Send request to PhonePe API
+    const response = await axios.post(`${process.env.PHONEPE_BASE_URL}/pg/v1/pay`, payload, {
+      headers: {
+        "Content-Type": "application/json",
+        "X-VERIFY": checksum,
+      },
     });
+
+    if (response.data.success) {
+      return res.status(201).json({
+        success: true,
+        booking,
+        paymentRequest: response.data,
+      });
+    } else {
+      throw new Error(response.data.message);
+    }
   } catch (error) {
     res.status(400).json({
       success: false,
@@ -95,39 +110,49 @@ exports.createBooking = async (req, res) => {
 };
 
 
-// Verify Razorpay payment
 exports.verifyPayment = async (req, res) => {
-  const { razorpayOrderId, razorpayPaymentId, razorpaySignature, bookingId } = req.body;
+  const { transactionId, bookingId } = req.body;
 
   try {
-    // Verify the Razorpay signature
-    const generatedSignature = crypto
-      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
-      .update(razorpayOrderId + "|" + razorpayPaymentId)
-      .digest("hex");
+    // Prepare payload for PhonePe payment verification
+    const payload = {
+      merchantId: process.env.PHONEPE_MERCHANT_ID,
+      transactionId,
+    };
 
-    if (generatedSignature !== razorpaySignature) {
-      return res.status(400).json({
-        success: false,
-        message: "Payment verification failed",
-      });
-    }
+    // Generate the checksum
+    const checksum = crypto
+      .createHmac("sha256", process.env.PHONEPE_MERCHANT_KEY)
+      .update(JSON.stringify(payload))
+      .digest("base64");
 
-    // Update the booking with payment details
-    const booking = await Booking.findByIdAndUpdate(
-      bookingId,
-      {
-        paymentId: razorpayPaymentId,
-        paymentStatus: "Completed",
+    // Call PhonePe payment status API
+    const response = await axios.post(`${process.env.PHONEPE_BASE_URL}/pg/v1/status`, payload, {
+      headers: {
+        "Content-Type": "application/json",
+        "X-VERIFY": checksum,
       },
-      { new: true }
-    );
-
-    res.status(200).json({
-      success: true,
-      message: "Payment verified and booking updated",
-      booking,
     });
+
+    if (response.data.success && response.data.data.status === "SUCCESS") {
+      // Update booking with payment status
+      const booking = await Booking.findByIdAndUpdate(
+        bookingId,
+        {
+          paymentId: transactionId,
+          paymentStatus: "Completed",
+        },
+        { new: true }
+      );
+
+      return res.status(200).json({
+        success: true,
+        message: "Payment verified and booking updated",
+        booking,
+      });
+    } else {
+      throw new Error("Payment verification failed.");
+    }
   } catch (error) {
     res.status(400).json({
       success: false,
