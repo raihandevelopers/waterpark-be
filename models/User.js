@@ -6,11 +6,11 @@ const userSchema = new mongoose.Schema({
     required: [true, 'Email is required'],
     unique: true,
   },
-  name : {
+  name: {
     type: String,
     required: [true, 'Name is required'],
   },
-  mobile : {
+  mobile: {
     type: String,
     required: [true, 'Mobile is required'],
   },
@@ -22,6 +22,9 @@ const userSchema = new mongoose.Schema({
     type: String,
     enum: ['user', 'admin'],
     default: 'user',
+  },
+  refreshToken: {
+    type: String, // Field for storing the refresh token
   },
 });
 

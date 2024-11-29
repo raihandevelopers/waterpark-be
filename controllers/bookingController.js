@@ -1,11 +1,9 @@
 const Booking = require("../models/Booking");
-const Razorpay = require("razorpay");
 const nodemailer = require('nodemailer');
+const crypto = require('crypto');
+// console.log(crypto.createHash('sha256').update('test').digest('hex'));
+const axios = require("axios");
 
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
 
 const sendEmail = async (to, subject, text) => {
   const transporter = nodemailer.createTransport({
@@ -68,37 +66,43 @@ exports.createBooking = async (req, res) => {
       });
     }
 
-    // Initiate PhonePe payment
+    // PhonePe payment integration
     const payload = {
       merchantId: process.env.PHONEPE_MERCHANT_ID,
-      transactionId: booking._id.toString(),
+      merchantTransactionId: booking._id.toString(),
+      merchantUserId: "MUID123", // Replace with the actual user ID logic if needed
       amount: totalPrice * 100, // Amount in paise
-      merchantOrderId: booking._id.toString(),
-      redirectUrl: process.env.PHONEPE_CALLBACK_URL,
+      redirectUrl: `${process.env.APP_BE_URL}/payment/validate/${booking._id}`,
+      redirectMode: "REDIRECT",
+      mobileNumber: phone, // User's phone number
+      paymentInstrument: {
+        type: "PAY_PAGE",
+      },
     };
 
     // Generate the checksum
-    const checksum = crypto
-      .createHmac("sha256", process.env.PHONEPE_MERCHANT_KEY)
-      .update(JSON.stringify(payload))
-      .digest("base64");
+    const payloadString = JSON.stringify(payload);
+    const checksumString = Buffer.from(payloadString).toString("base64") + "/pg/v1/pay" + process.env.PHONEPE_MERCHANT_KEY;
+    const checksum = crypto.createHash("sha256").update(checksumString).digest("hex") + "###" + process.env.PHONEPE_SALT_INDEX;
 
-    // Send request to PhonePe API
-    const response = await axios.post(`${process.env.PHONEPE_BASE_URL}/pg/v1/pay`, payload, {
+    // Send the payment request to PhonePe
+    const response = await axios.post(`${process.env.PHONEPE_BASE_URL}/pg/v1/pay`, { request: Buffer.from(payloadString).toString("base64") }, {
       headers: {
         "Content-Type": "application/json",
         "X-VERIFY": checksum,
+        accept: "application/json",
       },
     });
 
     if (response.data.success) {
-      return res.status(201).json({
+      // Redirect the user to PhonePe's payment page
+      res.status(200).json({
         success: true,
+        paymentUrl: response.data.data.instrumentResponse.redirectInfo.url,
         booking,
-        paymentRequest: response.data,
       });
     } else {
-      throw new Error(response.data.message);
+      throw new Error(response.data.message || "Payment initiation failed.");
     }
   } catch (error) {
     res.status(400).json({
