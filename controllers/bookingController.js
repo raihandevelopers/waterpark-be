@@ -1,13 +1,13 @@
 const Booking = require("../models/Booking");
-const nodemailer = require('nodemailer');
-const crypto = require('crypto');
-// console.log(crypto.createHash('sha256').update('test').digest('hex'));
+const nodemailer = require("nodemailer");
+const crypto = require("crypto");
 const axios = require("axios");
 
 
+// Email helper function
 const sendEmail = async (to, subject, text) => {
   const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    service: "gmail",
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
@@ -28,12 +28,14 @@ const sendEmail = async (to, subject, text) => {
   }
 };
 
+// Create Booking with PhonePe Integration
 exports.createBooking = async (req, res) => {
   const { waterpark, name, email, phone, date, adults, children, totalPrice, paymentType, waterparkName } = req.body;
 
   try {
-    // Save booking with "Pending" payment status
+    // Save booking with the authenticated user's ID
     const booking = new Booking({
+      user: req.user.userId, // Use only the userId from JWT
       waterpark,
       waterparkName,
       name,
@@ -50,52 +52,67 @@ exports.createBooking = async (req, res) => {
 
     await booking.save();
 
+    // Send a confirmation email
     const emailSubject = `Booking Confirmation for ${waterpark}`;
-    const emailBody = paymentType === "cash"
-      ? `Dear ${name},\n\nYour booking at ${waterpark} has been confirmed. Payment will be collected at the venue.\nBooking ID: ${booking._id}\n\nThank you!`
-      : `Dear ${name},\n\nYour booking at ${waterpark} has been confirmed. Payment is pending. Please complete the payment online.\nBooking ID: ${booking._id}\n\nThank you!`;
+    const emailBody =
+      paymentType === "cash"
+        ? `Dear ${name},\n\nYour booking at ${waterpark} has been confirmed. Payment will be collected at the venue.\nBooking ID: ${booking._id}\n\nThank you!`
+        : `Dear ${name},\n\nYour booking at ${waterpark} has been confirmed. Payment is pending. Please complete the payment online.\nBooking ID: ${booking._id}\n\nThank you!`;
 
     await sendEmail(email, emailSubject, emailBody);
 
     if (paymentType === "cash") {
-      // If it's cash on delivery, return booking details
+      // Return booking details for cash payment
       return res.status(201).json({
         success: true,
         booking,
-        message: "Booking created successfully with cash on delivery option.",
+        message: "Booking created successfully with cash payment.",
       });
     }
 
-    // PhonePe payment integration
+    // PhonePe payment payload
     const payload = {
       merchantId: process.env.PHONEPE_MERCHANT_ID,
       merchantTransactionId: booking._id.toString(),
-      merchantUserId: "MUID123", // Replace with the actual user ID logic if needed
+      merchantUserId: req.user, // Use userId from JWT
       amount: totalPrice * 100, // Amount in paise
       redirectUrl: `${process.env.APP_BE_URL}/payment/validate/${booking._id}`,
       redirectMode: "REDIRECT",
-      mobileNumber: phone, // User's phone number
+      mobileNumber: phone,
       paymentInstrument: {
         type: "PAY_PAGE",
       },
     };
 
-    // Generate the checksum
+    // Generate checksum
     const payloadString = JSON.stringify(payload);
-    const checksumString = Buffer.from(payloadString).toString("base64") + "/pg/v1/pay" + process.env.PHONEPE_MERCHANT_KEY;
-    const checksum = crypto.createHash("sha256").update(checksumString).digest("hex") + "###" + process.env.PHONEPE_SALT_INDEX;
+    const checksumString =
+      Buffer.from(payloadString).toString("base64") +
+      "/pg/v1/pay" +
+      process.env.PHONEPE_MERCHANT_KEY;
+    const checksum =
+      crypto
+        .createHash("sha256")
+        .update(checksumString)
+        .digest("hex") +
+      "###" +
+      process.env.PHONEPE_SALT_INDEX;
 
-    // Send the payment request to PhonePe
-    const response = await axios.post(`${process.env.PHONEPE_BASE_URL}/pg/v1/pay`, { request: Buffer.from(payloadString).toString("base64") }, {
-      headers: {
-        "Content-Type": "application/json",
-        "X-VERIFY": checksum,
-        accept: "application/json",
-      },
-    });
+    // Make a request to PhonePe
+    const response = await axios.post(
+      `${process.env.PHONEPE_BASE_URL}/pg/v1/pay`,
+      { request: Buffer.from(payloadString).toString("base64") },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "X-VERIFY": checksum,
+          accept: "application/json",
+        },
+      }
+    );
 
     if (response.data.success) {
-      // Redirect the user to PhonePe's payment page
+      // Redirect the user to PhonePe payment URL
       res.status(200).json({
         success: true,
         paymentUrl: response.data.data.instrumentResponse.redirectInfo.url,
@@ -107,39 +124,43 @@ exports.createBooking = async (req, res) => {
   } catch (error) {
     res.status(400).json({
       success: false,
-      message: "Error creating booking",
+      message: "Error creating booking.",
       error: error.message,
     });
   }
 };
 
-
+// Verify Payment Status
 exports.verifyPayment = async (req, res) => {
   const { transactionId, bookingId } = req.body;
 
   try {
-    // Prepare payload for PhonePe payment verification
+    // Payload for PhonePe verification
     const payload = {
       merchantId: process.env.PHONEPE_MERCHANT_ID,
       transactionId,
     };
 
-    // Generate the checksum
+    // Generate checksum
     const checksum = crypto
       .createHmac("sha256", process.env.PHONEPE_MERCHANT_KEY)
       .update(JSON.stringify(payload))
       .digest("base64");
 
-    // Call PhonePe payment status API
-    const response = await axios.post(`${process.env.PHONEPE_BASE_URL}/pg/v1/status`, payload, {
-      headers: {
-        "Content-Type": "application/json",
-        "X-VERIFY": checksum,
-      },
-    });
+    // Call PhonePe status API
+    const response = await axios.post(
+      `${process.env.PHONEPE_BASE_URL}/pg/v1/status`,
+      payload,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "X-VERIFY": checksum,
+        },
+      }
+    );
 
     if (response.data.success && response.data.data.status === "SUCCESS") {
-      // Update booking with payment status
+      // Update booking status
       const booking = await Booking.findByIdAndUpdate(
         bookingId,
         {
@@ -151,7 +172,7 @@ exports.verifyPayment = async (req, res) => {
 
       return res.status(200).json({
         success: true,
-        message: "Payment verified and booking updated",
+        message: "Payment verified and booking updated.",
         booking,
       });
     } else {
@@ -160,7 +181,7 @@ exports.verifyPayment = async (req, res) => {
   } catch (error) {
     res.status(400).json({
       success: false,
-      message: "Error verifying payment",
+      message: "Error verifying payment.",
       error: error.message,
     });
   }
@@ -176,22 +197,19 @@ exports.getAllBookings = async (req, res) => {
   }
 };
 
-// Assuming the email is sent in the request body
+// Fetch User's Bookings
 exports.getUserBookings = async (req, res) => {
-  const { email } = req.body;  // Get the email from the request body
-
   try {
-    // Fetch all bookings for the specific user by email
-    const bookings = await Booking.find({ email: email });  // Find bookings with the provided email
+    // Find bookings for the authenticated user
+    const bookings = await Booking.find({ user: req.user });
 
     if (bookings.length === 0) {
       return res.status(404).json({
         success: false,
-        message: "No bookings found for this email.",
+        message: "No bookings found for this user.",
       });
     }
 
-    // Return the bookings as a JSON response
     res.status(200).json({
       success: true,
       bookings,

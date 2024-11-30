@@ -35,7 +35,7 @@ const signup = async (req, res) => {
     delete userResponse.password;  // Remove password from the response
 
     // Create a JWT token
-    const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
     res.status(201).json({ token, message: 'User created successfully',user:userResponse });
   } catch (error) {
@@ -65,7 +65,7 @@ const login = async (req, res) => {
     }
 
     // Create a JWT token
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '7D' });
 
     const userResponse = user.toObject();
     delete userResponse.password;  // Remove password from the response
