@@ -23,8 +23,11 @@ connectDB();
 
 // Middleware
 app.use(cors({
-    origin: '*',
+    origin: ['https://waterparkchalo.netlify.app'], // Replace with your production frontend URL
+    methods: ['GET', 'POST', 'PUT', 'DELETE'], // Specify allowed methods
+    allowedHeaders: ['Content-Type', 'Authorization'], // Specify headers
 }));
+
 app.use(bodyParser.json());
 
 // Public Routes (No JWT required)
