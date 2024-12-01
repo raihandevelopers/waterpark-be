@@ -23,9 +23,10 @@ connectDB();
 
 // Middleware
 app.use(cors({
-    origin: ['https://waterparkchalo.netlify.app'], // Replace with your production frontend URL
+    origin: ['https://waterparkchalo.netlify.app', 'http://localhost:5173'], // Replace with your production frontend URL
     methods: ['GET', 'POST', 'PUT', 'DELETE'], // Specify allowed methods
     allowedHeaders: ['Content-Type', 'Authorization'], // Specify headers
+    credentials: true
 }));
 
 app.use(bodyParser.json());
