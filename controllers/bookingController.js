@@ -2,6 +2,8 @@ const Booking = require("../models/Booking");
 const nodemailer = require("nodemailer");
 const crypto = require("crypto");
 const axios = require("axios");
+const User = require("../models/User");
+const { removeListener } = require("process");
 
 
 // Email helper function
@@ -201,8 +203,10 @@ exports.getAllBookings = async (req, res) => {
 exports.getUserBookings = async (req, res) => {
   try {
     // Find bookings for the authenticated user
-    const bookings = await Booking.find({ user: req.user });
-
+    console.log(req.user);
+    const bookings = await Booking.find({ user: req.user.userId });
+    const user = await User.findById(req.user.userId);
+    console.log(user);
     if (bookings.length === 0) {
       return res.status(404).json({
         success: false,
@@ -212,6 +216,7 @@ exports.getUserBookings = async (req, res) => {
 
     res.status(200).json({
       success: true,
+      role: user.role,
       bookings,
     });
   } catch (error) {

@@ -41,7 +41,7 @@ app.use("/api/reviews", reviewRoutes);
 // Protected Routes (Require JWT)
 app.use('/api/waterparks', waterparkRoutes);
 app.use('/api/faqs', faqRoutes);
-app.use('/api/bookings', authenticateToken, bookingRoutes);
+app.use('/api/bookings', bookingRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
