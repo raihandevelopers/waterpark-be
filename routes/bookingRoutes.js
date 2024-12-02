@@ -1,5 +1,5 @@
 const express = require('express');
-const { createBooking, verifyPayment, getAllBookings, getUserBookings } = require('../controllers/bookingController');
+const { createBooking, verifyPayment, getAllBookings, getUserBookings,getSingleBooking } = require('../controllers/bookingController');
 const authenticate = require('../middleware/authMiddleware'); // Import the middleware
 const User = require('../models/User');
 
@@ -22,5 +22,6 @@ router.post('/create', createBooking);
 router.get('/verify/:id', verifyPayment);
 router.get('/all', authenticate,checkAdminRole, getAllBookings); // Optional: Protect admin-only routes
 router.post('/user', authenticate, getUserBookings);
+router.get('/:id', getSingleBooking);
 
 module.exports = router;

@@ -123,13 +123,13 @@ exports.createBooking = async (req, res) => {
       }
     );
 
-    if (response.data.success) { 
-      console.log("here",response.data);
+    if (response.data.success) {
+      console.log("here", response.data);
       const transactionId = response.data.data.merchantTransactionId;
-    
+
       // Log the transaction ID
       console.log("Transaction initiated with ID:", transactionId);
-          // Redirect the user to PhonePe payment URL
+      // Redirect the user to PhonePe payment URL
       res.status(200).json({
         success: true,
         paymentUrl: response.data.data.instrumentResponse.redirectInfo.url,
@@ -194,12 +194,15 @@ exports.verifyPayment = async (req, res) => {
 
             await booking.save(); // Save the updated booking to the database
 
+            const frontendUrl = `http://localhost:5173/ticket?bookingId=${booking._id}`;
+            res.redirect(frontendUrl);
+
             // Return a successful response with the updated booking
-            res.status(200).json({
-              success: true,
-              message: "Payment successful, booking status updated.",
-              booking,
-            });
+            // res.status(200).json({
+            //   success: true,
+            //   message: "Payment successful, booking status updated.",
+            //   booking,
+            // });
           } else {
             res.status(404).json({ success: false, message: "Booking not found." });
           }
@@ -220,6 +223,34 @@ exports.verifyPayment = async (req, res) => {
     res.status(400).json({ success: false, message: "Invalid transaction ID." });
   }
 };
+exports.getSingleBooking = async (req, res) => {
+  const { id } = req.params; // Extract the booking ID from the request parameters
+
+  console.log("Booking ID:", id);
+  try {
+    const booking = await Booking.findById(id); // Fetch the booking from the database
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found.",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Booking retrieved successfully.",
+      booking,
+    });
+  } catch (error) {
+    console.error("Error fetching booking:", error);
+    res.status(500).json({
+      success: false,
+      message: "An error occurred while fetching the booking.",
+    });
+  }
+};
+
 exports.getAllBookings = async (req, res) => {
   try {
     const bookings = await Booking.find(); // Fetch all bookings from the database
