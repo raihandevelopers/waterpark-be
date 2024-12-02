@@ -24,7 +24,8 @@
     "multer": "^1.4.5-lts.1",
     "nodemailer": "^6.9.16",
     "pm2": "^5.4.3",
-    "sanitize-html": "^2.13.1"
+    "sanitize-html": "^2.13.1",
+    "uniqid": "^5.4.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.7"

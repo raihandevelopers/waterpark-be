@@ -18,8 +18,8 @@ const checkAdminRole = async (req, res, next) => {
 
 
 // Protect routes with authentication 
-router.post('/create', authenticate, createBooking);
-router.post('/verify', authenticate, verifyPayment);
+router.post('/create', createBooking);
+router.get('/verify/:id', verifyPayment);
 router.get('/all', authenticate,checkAdminRole, getAllBookings); // Optional: Protect admin-only routes
 router.post('/user', authenticate, getUserBookings);
 

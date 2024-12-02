@@ -4,6 +4,7 @@ const crypto = require("crypto");
 const axios = require("axios");
 const User = require("../models/User");
 const { removeListener } = require("process");
+const uniqid = require("uniqid");
 
 
 // Email helper function
@@ -29,15 +30,15 @@ const sendEmail = async (to, subject, text) => {
     console.error("Error sending email:", error);
   }
 };
+const PHONE_PE_HOST_URL = "https://api-preprod.phonepe.com/apis/pg-sandbox";
 
 // Create Booking with PhonePe Integration
 exports.createBooking = async (req, res) => {
   const { waterpark, name, email, phone, date, adults, children, totalPrice, paymentType, waterparkName } = req.body;
 
   try {
-    // Save booking with the authenticated user's ID
-    const booking = new Booking({
-      user: req.user.userId, // Use only the userId from JWT
+    // Save booking without a user ID for guest users
+    const bookingData = {
       waterpark,
       waterparkName,
       name,
@@ -50,9 +51,19 @@ exports.createBooking = async (req, res) => {
       paymentStatus: "Pending",
       paymentType,
       bookingDate: new Date(),
-    });
+    };
+
+    if (req.user) {
+      // If user is logged in, associate the booking with the user
+      bookingData.user = req.user.userId;
+    }
+
+    const booking = new Booking(bookingData);
 
     await booking.save();
+
+    console.log("Booking created with ID:", booking._id);
+
 
     // Send a confirmation email
     const emailSubject = `Booking Confirmation for ${waterpark}`;
@@ -72,13 +83,13 @@ exports.createBooking = async (req, res) => {
       });
     }
 
-    // PhonePe payment payload
+    // PhonePe payment integration
     const payload = {
       merchantId: process.env.PHONEPE_MERCHANT_ID,
       merchantTransactionId: booking._id.toString(),
-      merchantUserId: req.user, // Use userId from JWT
+      merchantUserId: req.user ? req.user.userId : "guest", // Use "guest" for non-logged-in users
       amount: totalPrice * 100, // Amount in paise
-      redirectUrl: `${process.env.APP_BE_URL}/payment/validate/${booking._id}`,
+      redirectUrl: `http://localhost:5000/api/bookings/verify/${booking._id}`,
       redirectMode: "REDIRECT",
       mobileNumber: phone,
       paymentInstrument: {
@@ -100,9 +111,8 @@ exports.createBooking = async (req, res) => {
       "###" +
       process.env.PHONEPE_SALT_INDEX;
 
-    // Make a request to PhonePe
     const response = await axios.post(
-      `${process.env.PHONEPE_BASE_URL}/pg/v1/pay`,
+      `${PHONE_PE_HOST_URL}/pg/v1/pay`,
       { request: Buffer.from(payloadString).toString("base64") },
       {
         headers: {
@@ -113,8 +123,13 @@ exports.createBooking = async (req, res) => {
       }
     );
 
-    if (response.data.success) {
-      // Redirect the user to PhonePe payment URL
+    if (response.data.success) { 
+      console.log("here",response.data);
+      const transactionId = response.data.data.merchantTransactionId;
+    
+      // Log the transaction ID
+      console.log("Transaction initiated with ID:", transactionId);
+          // Redirect the user to PhonePe payment URL
       res.status(200).json({
         success: true,
         paymentUrl: response.data.data.instrumentResponse.redirectInfo.url,
@@ -131,64 +146,80 @@ exports.createBooking = async (req, res) => {
     });
   }
 };
+const { APP_BE_URL, PHONEPE_MERCHANT_ID, PHONEPE_MERCHANT_KEY, PHONEPE_SALT_INDEX } = process.env;
+
+
+const sha256 = (string) => {
+  return crypto.createHash('sha256').update(string).digest('hex');
+};
 
 // Verify Payment Status
 exports.verifyPayment = async (req, res) => {
-  const { transactionId, bookingId } = req.body;
+  const { id } = req.params;
+  const merchantTransactionId = id;
 
-  try {
-    // Payload for PhonePe verification
-    const payload = {
-      merchantId: process.env.PHONEPE_MERCHANT_ID,
-      transactionId,
-    };
+  // Check the status of the payment using merchantTransactionId
+  if (merchantTransactionId) {
+    let statusUrl =
+      `${PHONE_PE_HOST_URL}/pg/v1/status/${PHONEPE_MERCHANT_ID}/` + merchantTransactionId;
 
-    // Generate checksum
-    const checksum = crypto
-      .createHmac("sha256", process.env.PHONEPE_MERCHANT_KEY)
-      .update(JSON.stringify(payload))
-      .digest("base64");
+    console.log("statusUrl", statusUrl);
 
-    // Call PhonePe status API
-    const response = await axios.post(
-      `${process.env.PHONEPE_BASE_URL}/pg/v1/status`,
-      payload,
-      {
+    // Generate X-VERIFY
+    let string =
+      `/pg/v1/status/${PHONEPE_MERCHANT_ID}/` + merchantTransactionId + PHONEPE_MERCHANT_KEY;
+    let sha256_val = sha256(string);
+    let xVerifyChecksum = sha256_val + "###" + PHONEPE_SALT_INDEX;
+
+    axios
+      .get(statusUrl, {
         headers: {
           "Content-Type": "application/json",
-          "X-VERIFY": checksum,
+          "X-VERIFY": xVerifyChecksum,
+          "X-MERCHANT-ID": merchantTransactionId,
+          accept: "application/json",
         },
-      }
-    );
+      })
+      .then(async function (response) {
+        console.log("response->", response.data);
 
-    if (response.data.success && response.data.data.status === "SUCCESS") {
-      // Update booking status
-      const booking = await Booking.findByIdAndUpdate(
-        bookingId,
-        {
-          paymentId: transactionId,
-          paymentStatus: "Completed",
-        },
-        { new: true }
-      );
+        // If the payment was successful
+        if (response.data && response.data.code === "PAYMENT_SUCCESS") {
+          // Update booking status and payment type to 'Completed' and 'PhonePe'
+          const booking = await Booking.findOne({ _id: merchantTransactionId });
 
-      return res.status(200).json({
-        success: true,
-        message: "Payment verified and booking updated.",
-        booking,
+          if (booking) {
+            booking.paymentStatus = "Completed";
+            booking.paymentType = "PhonePe";
+
+            await booking.save(); // Save the updated booking to the database
+
+            // Return a successful response with the updated booking
+            res.status(200).json({
+              success: true,
+              message: "Payment successful, booking status updated.",
+              booking,
+            });
+          } else {
+            res.status(404).json({ success: false, message: "Booking not found." });
+          }
+        } else {
+          // Handle payment failure or pending status
+          res.status(400).json({
+            success: false,
+            message: "Payment failed or is pending.",
+          });
+        }
+      })
+      .catch(function (error) {
+        console.log("error->", error);
+        // Handle error and redirect to payment failure/pending status page
+        res.status(500).json({ success: false, message: "Error verifying payment." });
       });
-    } else {
-      throw new Error("Payment verification failed.");
-    }
-  } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: "Error verifying payment.",
-      error: error.message,
-    });
+  } else {
+    res.status(400).json({ success: false, message: "Invalid transaction ID." });
   }
 };
-
 exports.getAllBookings = async (req, res) => {
   try {
     const bookings = await Booking.find(); // Fetch all bookings from the database
