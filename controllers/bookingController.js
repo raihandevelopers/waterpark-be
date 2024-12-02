@@ -194,7 +194,7 @@ exports.verifyPayment = async (req, res) => {
 
             await booking.save(); // Save the updated booking to the database
 
-            const frontendUrl = `http://localhost:5173/ticket?bookingId=${booking._id}`;
+            const frontendUrl = `https://waterparkchalo.netlify.app/ticket?bookingId=${booking._id}`;
             res.redirect(frontendUrl);
 
             // Return a successful response with the updated booking
