@@ -30,7 +30,7 @@ const sendEmail = async (to, subject, text) => {
     console.error("Error sending email:", error);
   }
 };
-const PHONE_PE_HOST_URL = "https://api-preprod.phonepe.com/apis/pg-sandbox";
+const PHONE_PE_HOST_URL = "https://api.phonepe.com/apis/hermes";
 
 // Create Booking with PhonePe Integration
 exports.createBooking = async (req, res) => {
