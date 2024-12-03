@@ -214,7 +214,7 @@ exports.verifyPayment = async (req, res) => {
           await sendEmail(booking.email, emailSubject, emailBody);
 
           // Redirect user to the ticket page
-          const frontendUrl = `https://waterparkchalo.netlify.app/ticket?bookingId=${booking._id}`;
+          const frontendUrl = `https://waterparkchalo.com/ticket?bookingId=${booking._id}`;
           return res.redirect(frontendUrl);
         } else {
           return res.status(404).json({ success: false, message: "Booking not found." });
