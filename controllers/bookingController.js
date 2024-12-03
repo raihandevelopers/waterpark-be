@@ -34,7 +34,7 @@ const PHONE_PE_HOST_URL = "https://api-preprod.phonepe.com/apis/pg-sandbox";
 
 // Create Booking with PhonePe Integration
 exports.createBooking = async (req, res) => {
-  const { waterpark, name, email, phone, date, adults, children, totalPrice, paymentType, waterparkName } = req.body;
+  const { waterpark, name, email, phone, date, adults, children, advanceAmount, paymentType, waterparkName } = req.body;
 
   try {
     // Save booking without a user ID for guest users
@@ -47,7 +47,7 @@ exports.createBooking = async (req, res) => {
       date,
       adults,
       children,
-      totalPrice,
+      advanceAmount,
       paymentStatus: "Pending",
       paymentType,
       bookingDate: new Date(),
@@ -65,14 +65,6 @@ exports.createBooking = async (req, res) => {
     console.log("Booking created with ID:", booking._id);
 
 
-    // Send a confirmation email
-    const emailSubject = `Booking Confirmation for ${waterpark}`;
-    const emailBody =
-      paymentType === "cash"
-        ? `Dear ${name},\n\nYour booking at ${waterpark} has been confirmed. Payment will be collected at the venue.\nBooking ID: ${booking._id}\n\nThank you!`
-        : `Dear ${name},\n\nYour booking at ${waterpark} has been confirmed. Payment is pending. Please complete the payment online.\nBooking ID: ${booking._id}\n\nThank you!`;
-
-    await sendEmail(email, emailSubject, emailBody);
 
     if (paymentType === "cash") {
       // Return booking details for cash payment
@@ -88,7 +80,7 @@ exports.createBooking = async (req, res) => {
       merchantId: process.env.PHONEPE_MERCHANT_ID,
       merchantTransactionId: booking._id.toString(),
       merchantUserId: req.user ? req.user.userId : "guest", // Use "guest" for non-logged-in users
-      amount: totalPrice * 100, // Amount in paise
+      amount: advanceAmount * 100, // Amount in paise
       redirectUrl: `http://localhost:5000/api/bookings/verify/${booking._id}`,
       redirectMode: "REDIRECT",
       mobileNumber: phone,
@@ -171,56 +163,75 @@ exports.verifyPayment = async (req, res) => {
     let sha256_val = sha256(string);
     let xVerifyChecksum = sha256_val + "###" + PHONEPE_SALT_INDEX;
 
-    axios
-      .get(statusUrl, {
+    try {
+      const response = await axios.get(statusUrl, {
         headers: {
           "Content-Type": "application/json",
           "X-VERIFY": xVerifyChecksum,
-          "X-MERCHANT-ID": merchantTransactionId,
           accept: "application/json",
         },
-      })
-      .then(async function (response) {
-        console.log("response->", response.data);
-
-        // If the payment was successful
-        if (response.data && response.data.code === "PAYMENT_SUCCESS") {
-          // Update booking status and payment type to 'Completed' and 'PhonePe'
-          const booking = await Booking.findOne({ _id: merchantTransactionId });
-
-          if (booking) {
-            booking.paymentStatus = "Completed";
-            booking.paymentType = "PhonePe";
-
-            await booking.save(); // Save the updated booking to the database
-
-            const frontendUrl = `https://waterparkchalo.netlify.app/ticket?bookingId=${booking._id}`;
-            res.redirect(frontendUrl);
-
-            // Return a successful response with the updated booking
-            // res.status(200).json({
-            //   success: true,
-            //   message: "Payment successful, booking status updated.",
-            //   booking,
-            // });
-          } else {
-            res.status(404).json({ success: false, message: "Booking not found." });
-          }
-        } else {
-          // Handle payment failure or pending status
-          res.status(400).json({
-            success: false,
-            message: "Payment failed or is pending.",
-          });
-        }
-      })
-      .catch(function (error) {
-        console.log("error->", error);
-        // Handle error and redirect to payment failure/pending status page
-        res.status(500).json({ success: false, message: "Error verifying payment." });
       });
+
+      console.log("response->", response.data);
+
+      // If the payment was successful
+      if (response.data && response.data.code === "PAYMENT_SUCCESS") {
+        // Update booking status and payment type to 'Completed' and 'PhonePe'
+        const booking = await Booking.findOne({ _id: merchantTransactionId });
+
+        if (booking) {
+          booking.paymentStatus = "Completed";
+          booking.paymentType = "PhonePe";
+
+          await booking.save(); // Save the updated booking to the database
+
+          // Prepare email content
+          const emailSubject = `Payment Confirmation for Booking at ${booking.waterparkName}`;
+          const emailBody = `
+            Dear ${booking.name},
+
+            Your payment for booking at ${booking.waterparkName} has been successfully processed.
+
+            Here are your booking details:
+            - Booking ID: ${booking._id}
+            - Name: ${booking.name}
+            - Email: ${booking.email}
+            - Phone: ${booking.phone}
+            - Date: ${booking.date.toLocaleDateString()}
+            - Adults: ${booking.adults}
+            - Children: ${booking.children}
+            - Advance Amount: ₹${booking.advanceAmount}
+            - Payment Status: ${booking.paymentStatus}
+            - Payment Type: ${booking.paymentType}
+
+            Thank you for choosing our service! We look forward to seeing you.
+
+            Best regards,
+            Waterpark Team
+          `;
+
+          // Send confirmation email
+          await sendEmail(booking.email, emailSubject, emailBody);
+
+          // Redirect user to the ticket page
+          const frontendUrl = `https://waterparkchalo.netlify.app/ticket?bookingId=${booking._id}`;
+          return res.redirect(frontendUrl);
+        } else {
+          return res.status(404).json({ success: false, message: "Booking not found." });
+        }
+      } else {
+        // Handle payment failure or pending status
+        return res.status(400).json({
+          success: false,
+          message: "Payment failed or is pending.",
+        });
+      }
+    } catch (error) {
+      console.error("Error verifying payment:", error);
+      return res.status(500).json({ success: false, message: "Error verifying payment." });
+    }
   } else {
-    res.status(400).json({ success: false, message: "Invalid transaction ID." });
+    return res.status(400).json({ success: false, message: "Invalid transaction ID." });
   }
 };
 exports.getSingleBooking = async (req, res) => {

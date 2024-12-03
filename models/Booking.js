@@ -19,7 +19,7 @@ const bookingSchema = new mongoose.Schema({
   adultPrice: { type: Number, default: 0 }, // Default to 0
   childPrice: { type: Number, default: 0 }, // Default to 0
   discountPercentage: { type: Number, default: 0 }, // Default to 0
-  totalPrice: { type: Number, required: true }, // Total price is mandatory
+  advanceAmount: { type: Number, required: true }, // Total price is mandatory
   paymentId: String,
   paymentStatus: { type: String, default: "Pending" },
 });
