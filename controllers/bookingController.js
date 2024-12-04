@@ -168,6 +168,7 @@ exports.verifyPayment = async (req, res) => {
         headers: {
           "Content-Type": "application/json",
           "X-VERIFY": xVerifyChecksum,
+          "X-MERCHANT-ID": process.env.PHONEPE_MERCHANT_ID,
           accept: "application/json",
         },
       });
