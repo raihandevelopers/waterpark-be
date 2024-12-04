@@ -186,6 +186,8 @@ exports.verifyPayment = async (req, res) => {
 
           await booking.save(); // Save the updated booking to the database
 
+
+          const frontendUrl = `https://waterparkchalo.com/ticket?bookingId=${booking._id}`;
           // Prepare email content
           const emailSubject = `Payment Confirmation for Booking at ${booking.waterparkName}`;
           const emailBody = `
@@ -205,6 +207,8 @@ exports.verifyPayment = async (req, res) => {
             - Payment Status: ${booking.paymentStatus}
             - Payment Type: ${booking.paymentType}
 
+            - You can view your ticket here: ${frontendUrl}
+
             Thank you for choosing our service! We look forward to seeing you.
 
             Best regards,
@@ -215,7 +219,6 @@ exports.verifyPayment = async (req, res) => {
           await sendEmail(booking.email, emailSubject, emailBody);
 
           // Redirect user to the ticket page
-          const frontendUrl = `https://waterparkchalo.com/ticket?bookingId=${booking._id}`;
           return res.redirect(frontendUrl);
         } else {
           return res.status(404).json({ success: false, message: "Booking not found." });
