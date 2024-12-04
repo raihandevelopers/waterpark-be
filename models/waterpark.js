@@ -11,6 +11,7 @@ const waterparkSchema = new mongoose.Schema(
     adultPrice: { type: Number, required: true }, // Adult price per person
     childPrice: { type: Number, required: true }, // Child price per person
     discountPercentage: { type: Number, default: 0 }, // Discount percentage
+    discountedPrice: { type: Number}, // Discount percentage
     adultDiscountedPrice: { type: Number }, // Calculated discounted price for adults
     childDiscountedPrice: { type: Number }, // Calculated discounted price for children
     advanceAmount: { type: Number, required: true }, // Advance per person

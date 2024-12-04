@@ -14,6 +14,7 @@ const authRoutes = require('./routes/authRoutes'); // Import authentication rout
 const privacyPolicyRoutes = require('./routes/privacyPolicyRoutes');
 const termsRoutes = require('./routes/termsRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
+const emailRoutes = require("./routes/emailRoutes");
 
 const app = express();
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -37,6 +38,9 @@ app.use('/api/privacy-policy', privacyPolicyRoutes);
 app.use('/api/terms', termsRoutes);
 
 app.use("/api/reviews", reviewRoutes);
+
+app.use("/api", emailRoutes);
+
 
 // Protected Routes (Require JWT)
 app.use('/api/waterparks', waterparkRoutes);
