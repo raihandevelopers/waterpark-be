@@ -6,7 +6,8 @@ const {
   getAllWaterparks, 
   updateWaterpark, 
   getWaterpark, 
-  deleteWaterpark // Import the delete controller
+  deleteWaterpark, // Import the delete controller,
+  deleteImage, addImage
 } = require('../controllers/waterparkController');
 const authenticateToken = require('../middleware/authMiddleware'); // Import the authentication middleware
 const User = require('../models/User');
@@ -26,6 +27,8 @@ router.post('/add-waterpark',authenticateToken,checkAdminRole, upload.array('ima
 router.get('/', getAllWaterparks);
 router.put('/:id', authenticateToken ,checkAdminRole,upload.array('images', 20), updateWaterpark);
 router.get('/:id', getWaterpark);
+router.post('/:id/delete-image',authenticateToken ,checkAdminRole, deleteImage);
+router.post('/:id/add-image',authenticateToken ,checkAdminRole,upload.single('image'), addImage);
 
 // Add the delete route
 router.delete('/:id', authenticateToken,checkAdminRole,deleteWaterpark);

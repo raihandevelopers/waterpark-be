@@ -1,4 +1,6 @@
 const Waterpark = require('../models/waterpark');
+const fs = require('fs')
+const path = require('path');
 
 
 const BASE_URL = process.env.BASE_URL;
@@ -174,6 +176,82 @@ exports.getWaterpark = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch waterpark" });
   }
 };
+exports.deleteImage = async (req, res) => {
+  const { id: waterparkId } = req.params; // Extract waterpark ID from route parameters
+
+  const { imageUrl } = req.body; // Get `waterparkId` to identify the waterpark record
+
+  try {
+    // Extract the file name from the URL
+    const fileName = imageUrl.split('/').pop(); // Extracts "1732701617681-4-1.jpg"
+
+    // Construct the absolute file path on the server
+    const filePath = path.join(__dirname, '..', 'uploads', fileName);
+
+    console.log('Resolved file path:', filePath); // Debugging log
+
+    // Delete the file from the server
+    fs.unlink(filePath, async (err) => {
+      if (err) {
+        console.error('Error deleting file:', err);
+        return res.status(500).json({ error: 'Failed to delete image from server' });
+      }
+
+      console.log('File deleted successfully from server.');
+
+      // Remove the image URL from the database
+      try {
+        const waterpark = await Waterpark.findById(waterparkId);
+        if (!waterpark) {
+          return res.status(404).json({ error: 'Waterpark not found' });
+        }
+
+        // Remove the specific image URL from the `images` array
+        const updatedImages = waterpark.images.filter((img) => img !== imageUrl);
+
+        // Update the document in the database
+        waterpark.images = updatedImages;
+        await waterpark.save();
+
+        console.log('Image URL removed from database.');
+
+        return res.status(200).json({ message: 'Image deleted successfully', images: updatedImages });
+      } catch (dbError) {
+        console.error('Error updating database:', dbError);
+        return res.status(500).json({ error: 'Failed to update database' });
+      }
+    });
+  } catch (error) {
+    console.error('Error in delete-image endpoint:', error);
+    return res.status(500).json({ error: 'An unexpected error occurred' });
+  }
+};
+exports.addImage = async (req, res) => {
+  const { id: waterparkId } = req.params; // Extract waterpark ID from route parameters
+  console.log(req.body);
+  try {
+    // Find the waterpark by ID
+    const waterpark = await Waterpark.findById(waterparkId);
+    if (!waterpark) {
+      return res.status(404).json({ error: 'Waterpark not found' });
+    }
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image file uploaded' });
+    }
+    const imageUrl = `${BASE_URL}/${req.file.path.replace(/\\/g, '/')}`;
+
+
+    // Add the new image URL to the `images` array
+    waterpark.images.push(imageUrl);
+    await waterpark.save();
+
+    return res.status(200).json({ message: 'Image added successfully', images: waterpark.images });
+  } catch (error) {
+    console.error('Error in add-image endpoint:', error);
+    return res.status(500).json({ error: 'Failed to add image' });
+  }
+};
+
 
 
 // Delete Waterpark
