@@ -81,7 +81,7 @@ exports.createBooking = async (req, res) => {
       merchantTransactionId: booking._id.toString(),
       merchantUserId: req.user ? req.user.userId : "guest", // Use "guest" for non-logged-in users
       amount: advanceAmount * 100, // Amount in paise
-      redirectUrl: `http://localhost:5000/api/bookings/verify/${booking._id}`,
+      redirectUrl: `https://api.waterparkchalo.com/api/bookings/verify/${booking._id}`,
       redirectMode: "REDIRECT",
       mobileNumber: phone,
       paymentInstrument: {
