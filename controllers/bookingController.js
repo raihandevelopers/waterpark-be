@@ -34,7 +34,7 @@ const sendEmail = async (to, subject, text) => {
 
 // Create Booking with PhonePe Integration
 exports.createBooking = async (req, res) => {
-  const { waterpark, name, email, phone, date, adults, children, advanceAmount, paymentType, waterparkName } = req.body;
+  const { waterpark, name, email, phone, date, adults, children, advanceAmount, paymentType, waterparkName ,total} = req.body;
 
   try {
     // Save booking without a user ID for guest users
@@ -51,6 +51,7 @@ exports.createBooking = async (req, res) => {
       paymentStatus: "Pending",
       paymentType,
       bookingDate: new Date(),
+      totalAmount : total
     };
 
     if (req.user) {
@@ -251,7 +252,7 @@ exports.getSingleBooking = async (req, res) => {
         message: "Booking not found.",
       });
     }
-
+    console.log("Booking found:", booking);
     res.status(200).json({
       success: true,
       message: "Booking retrieved successfully.",

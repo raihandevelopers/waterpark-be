@@ -22,6 +22,7 @@ const bookingSchema = new mongoose.Schema({
   advanceAmount: { type: Number, required: true }, // Total price is mandatory
   paymentId: String,
   paymentStatus: { type: String, default: "Pending" },
+  totalAmount : { type: Number, required: true }
 });
 
 module.exports = mongoose.model("Booking", bookingSchema);
