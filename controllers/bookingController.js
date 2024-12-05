@@ -191,30 +191,34 @@ exports.verifyPayment = async (req, res) => {
           const frontendUrl = `https://waterparkchalo.com/ticket?bookingId=${booking._id}`;
           // Prepare email content
           const emailSubject = `Payment Confirmation for Booking at ${booking.waterparkName}`;
-          const emailBody = `
-            Dear ${booking.name},
+const emailBody = `
+  Dear ${booking.name},
 
-            Your payment for booking at ${booking.waterparkName} has been successfully processed.
+  Your payment for booking at ${booking.waterparkName} has been successfully processed.
 
-            Here are your booking details:
-            - Booking ID: ${booking._id}
-            - Name: ${booking.name}
-            - Email: ${booking.email}
-            - Phone: ${booking.phone}
-            - Date: ${booking.date.toLocaleDateString()}
-            - Adults: ${booking.adults}
-            - Children: ${booking.children}
-            - Advance Amount: ₹${booking.advanceAmount}
-            - Payment Status: ${booking.paymentStatus}
-            - Payment Type: ${booking.paymentType}
+  Here are your booking details:
+  - Booking ID: ${booking._id}
+  - Name: ${booking.name}
+  - Email: ${booking.email}
+  - Phone: ${booking.phone}
+  - Date: ${booking.date.toLocaleDateString()}
+  - Adults: ${booking.adults}
+  - Children: ${booking.children}
+  - Advance Amount: ₹${booking.advanceAmount}
+  - Payment Status: ${booking.paymentStatus}
+  - Payment Type: ${booking.paymentType}
 
-            - You can view your ticket here: ${frontendUrl}
+  You can view your ticket here: ${frontendUrl}
 
-            Thank you for choosing our service! We look forward to seeing you.
+  For more information, please visit:
+  - [Privacy Policy](https://waterparkchalo.com/privacy-policy)
+  - [Terms and Conditions](https://waterparkchalo.com/terms-and-conditions)
 
-            Best regards,
-            Waterpark Team
-          `;
+  Thank you for choosing our service! We look forward to seeing you.
+
+  Best regards,
+  Waterpark Team
+`;
 
           // Send confirmation email
           await sendEmail(booking.email, emailSubject, emailBody);
