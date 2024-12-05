@@ -191,35 +191,38 @@ exports.verifyPayment = async (req, res) => {
           const frontendUrl = `https://waterparkchalo.com/ticket?bookingId=${booking._id}`;
           // Prepare email content
           const emailSubject = `Payment Confirmation for Booking at ${booking.waterparkName}`;
-const emailBody = `
-  Dear ${booking.name},
-
-  Your payment for booking at ${booking.waterparkName} has been successfully processed.
-
-  Here are your booking details:
-  - Booking ID: ${booking._id}
-  - Name: ${booking.name}
-  - Email: ${booking.email}
-  - Phone: ${booking.phone}
-  - Date: ${booking.date.toLocaleDateString()}
-  - Adults: ${booking.adults}
-  - Children: ${booking.children}
-  - Advance Amount: ₹${booking.advanceAmount}
-  - Payment Status: ${booking.paymentStatus}
-  - Payment Type: ${booking.paymentType}
-
-  You can view your ticket here: ${frontendUrl}
-
-  For more information, please visit:
-  - [Privacy Policy](https://waterparkchalo.com/privacy-policy)
-  - [Terms and Conditions](https://waterparkchalo.com/terms-and-conditions)
-
-  Thank you for choosing our service! We look forward to seeing you.
-
-  Best regards,
-  Waterpark Team
-`;
-
+          const emailBody = `
+            Dear ${booking.name},
+          
+            Your payment for booking at ${booking.waterparkName} has been successfully processed.
+          
+            Here are your booking details:
+            • **Booking ID**: ${booking._id}
+            • **Name**: ${booking.name}
+            • **Email**: ${booking.email}
+            • **Phone**: ${booking.phone}
+            • **Date**: ${booking.date.toLocaleDateString()}
+            • **Adults**: ${booking.adults}
+            • **Children**: ${booking.children}
+            • **Advance Amount**: ₹${booking.advanceAmount}
+            • **Payment Status**: ${booking.paymentStatus}
+            • **Payment Type**: ${booking.paymentType}
+          
+            **Additional Information**:
+            • Please carry cash for the remaining payment.
+            • Drinking is strictly prohibited in the waterpark.
+            • Pickup and drop service is not included in this package.
+            • In case of any dispute or misunderstanding, the waterpark holds the final decision.
+            • For refund and cancellation, contact us 1 day before your check-in date.
+          
+            **You can view your ticket here**: [View Ticket](${frontendUrl})
+          
+            Thank you for choosing our service! We look forward to seeing you.
+          
+            Best regards,  
+            **Waterpark Team**
+          `;
+          
           // Send confirmation email
           await sendEmail(booking.email, emailSubject, emailBody);
 
