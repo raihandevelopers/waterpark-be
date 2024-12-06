@@ -11,16 +11,16 @@ const uniqid = require("uniqid");
 const sendEmail = async (to, subject, text) => {
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
-      port: process.env.SMTP_PORT,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
+    port: process.env.SMTP_PORT,
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  });
 
   const mailOptions = {
     from: process.env.SMTP_USER,
-    to,
+    to: Array.isArray(to) ? to.join(", ") : to, // Allow single or multiple recipients
     subject,
     text,
   };
@@ -28,9 +28,12 @@ const sendEmail = async (to, subject, text) => {
   try {
     await transporter.sendMail(mailOptions);
   } catch (error) {
-    console.error("Error sending email:", error);
-  }
-};const PHONE_PE_HOST_URL = "https://api.phonepe.com/apis/hermes";
+    console.error("Error sending email:", error);
+  }
+};
+
+
+const PHONE_PE_HOST_URL = "https://api.phonepe.com/apis/hermes";
 
 // Create Booking with PhonePe Integration
 exports.createBooking = async (req, res) => {
@@ -224,7 +227,12 @@ exports.verifyPayment = async (req, res) => {
           `;
           
           // Send confirmation email
-          await sendEmail(booking.email, emailSubject, emailBody);
+// Send confirmation email
+await sendEmail(
+  [booking.email, "am542062@gmail.com"], // Add both recipients
+  emailSubject,
+  emailBody
+);
 
           // Redirect user to the ticket page
           return res.redirect(frontendUrl);
