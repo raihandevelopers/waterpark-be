@@ -24,8 +24,10 @@ const userSchema = new mongoose.Schema({
     default: 'user',
   },
   refreshToken: {
-    type: String, // Field for storing the refresh token
+    type: String,
   },
+  resetPasswordToken: String,
+  resetPasswordExpires: Date,
 });
 
 module.exports = mongoose.model('User', userSchema);
