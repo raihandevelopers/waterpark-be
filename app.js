@@ -15,6 +15,8 @@ const privacyPolicyRoutes = require('./routes/privacyPolicyRoutes');
 const termsRoutes = require('./routes/termsRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
 const emailRoutes = require("./routes/emailRoutes");
+const bannerRoutes = require('./routes/bannerRoutes');
+
 
 const app = express();
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -40,6 +42,8 @@ app.use('/api/terms', termsRoutes);
 app.use("/api/reviews", reviewRoutes);
 
 app.use("/api", emailRoutes);
+
+app.use('/api/banners', bannerRoutes);
 
 
 // Protected Routes (Require JWT)
