@@ -1,6 +1,7 @@
 const Banner = require('../models/banner');
 const path = require('path');
 
+const BASE_URL = 'https://api.waterparkchalo.com'; // Change this to your actual base URL
 
 // Controller to upload a new banner image
 exports.uploadBanner = async (req, res) => {
