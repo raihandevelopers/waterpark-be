@@ -12,13 +12,9 @@ exports.uploadBanner = async (req, res) => {
 
     const bannerImagePath = path.join('uploads', req.file.filename);
 
-    const bannerData = { image: bannerImagePath };
+    const bannerData = { image: bannerImagePath, type: 'main' }; // Keep 'type: main' if needed
 
-    const banner = await Banner.findOneAndUpdate(
-      { type: 'main' },
-      bannerData,
-      { new: true, upsert: true }
-    );
+    const banner = await Banner.create(bannerData); // Always create a new banner
 
     res.status(200).json({
       message: 'Banner uploaded successfully',
@@ -33,7 +29,7 @@ exports.uploadBanner = async (req, res) => {
 // Controller to get the current banner
 exports.getBanner = async (req, res) => {
   try {
-    const banner = await Banner.findOne({ type: 'main' });
+    const banner = await Banner.find({}); // Fetch all banners
 
     if (!banner) {
       return res.status(404).json({ message: 'No banner found' });
