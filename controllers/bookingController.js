@@ -284,13 +284,15 @@ exports.getSingleBooking = async (req, res) => {
 
 exports.getAllBookings = async (req, res) => {
   try {
-    const bookings = await Booking.find(); // Fetch all bookings from the database
+    // Fetch all bookings from the database, sorted by bookingDate in descending order
+    const bookings = await Booking.find().sort({ bookingDate: -1 });
     res.status(200).json(bookings); // Return bookings as a JSON response
   } catch (error) {
     console.error("Error fetching bookings:", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
 
 // Fetch User's Bookings
 exports.getUserBookings = async (req, res) => {

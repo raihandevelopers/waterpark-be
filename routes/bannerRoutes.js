@@ -24,5 +24,7 @@ router.post('/upload',authenticate,checkAdminRole, upload.single('bannerImage'),
 
 router.get('/', bannerController.getBanner);
 
+router.delete('/:id', bannerController.deleteBanner); // This line is the new one for deleting a banner
+
 
 module.exports = router;

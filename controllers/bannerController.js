@@ -1,5 +1,6 @@
 const Banner = require('../models/banner');
 const path = require('path');
+const fs = require('fs');
 
 const BASE_URL = 'https://api.waterparkchalo.com'; // Change this to your actual base URL
 
@@ -40,4 +41,36 @@ exports.getBanner = async (req, res) => {
     res.status(500).json({ message: 'Internal server error', error: error.message });
   }
 };
+
+
+// Controller to delete a banner by ID
+exports.deleteBanner = async (req, res) => {
+  try {
+    const { id } = req.params; // Get the banner ID from the request parameters
+
+    const banner = await Banner.findById(id);
+    if (!banner) {
+      return res.status(404).json({ message: 'Banner not found' });
+    }
+
+    const bannerPath = path.join(__dirname, '..', banner.image); // Full path to the image file
+
+    // Delete the banner from the database
+    await Banner.findByIdAndDelete(id);
+
+    // Remove the banner image from the server
+    fs.unlink(bannerPath, (err) => {
+      if (err) {
+        console.error('Error deleting banner image:', err);
+        return res.status(500).json({ message: 'Failed to delete banner image' });
+      }
+
+      res.status(200).json({ message: 'Banner deleted successfully' });
+    });
+  } catch (error) {
+    console.error('Error deleting banner:', error);
+    res.status(500).json({ message: 'Internal server error', error: error.message });
+  }
+};
+
 
