@@ -299,7 +299,7 @@ exports.getUserBookings = async (req, res) => {
   try {
     // Find bookings for the authenticated user
     console.log(req.user);
-    const bookings = await Booking.find({ user: req.user.userId });
+    const bookings = await Booking.find({ email : req.body.email });
     const user = await User.findById(req.user.userId);
     console.log(user);
     if (bookings.length === 0) {
