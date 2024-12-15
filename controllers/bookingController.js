@@ -306,6 +306,7 @@ exports.getUserBookings = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "No bookings found for this user.",
+        role: user.role
       });
     }
 
